@@ -26,7 +26,9 @@ type BaseConfiguration struct {
 
 	NodeName    string
 	NodeAddress string
-
+	// LabelSelector containers the default labels of cnr created by agent, like "node.katalyst.deploy=true"
+	// This config must be consistent with the label-selector in katalyst-controller.
+	LabelSelector string
 	// LockFileName indicates the file used as unique lock
 	LockFileName string
 	// if LockWaitingEnabled set as true, will not panic and report agent as healthy instead

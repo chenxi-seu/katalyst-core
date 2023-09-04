@@ -320,7 +320,7 @@ func (cl *CNRLifecycle) updateOrCreateCNR(node *corev1.Node) error {
 	}
 
 	newCNR := cnr.DeepCopy()
-	newCNR.Labels = node.Labels
+	mergeLabels(node.Labels, newCNR.Labels)
 	setCNROwnerReference(newCNR, node)
 	if apiequality.Semantic.DeepEqual(newCNR, cnr) {
 		return nil
@@ -345,5 +345,11 @@ func setCNROwnerReference(cnr *apis.CustomNodeResource, node *corev1.Node) {
 			Controller:         &blocker,
 			BlockOwnerDeletion: &blocker,
 		},
+	}
+}
+
+func mergeLabels(source, destination map[string]string) {
+	for k, v := range source {
+		destination[k] = v
 	}
 }

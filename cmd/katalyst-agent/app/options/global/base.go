@@ -27,6 +27,7 @@ type BaseOptions struct {
 	Agents             []string
 	NodeName           string
 	NodeAddress        string
+	LabelSelector      string
 	LockFileName       string
 	LockWaitingEnabled bool
 
@@ -55,6 +56,8 @@ func (o *BaseOptions) AddFlags(fss *cliflag.NamedFlagSets) {
 	fs.StringSliceVar(&o.Agents, "agents", o.Agents, "The agents need to be started")
 	fs.StringVar(&o.NodeName, "node-name", o.NodeName, "the name of this node")
 	fs.StringVar(&o.NodeAddress, "node-address", o.NodeAddress, "the address of this node")
+	fs.StringVar(&o.LabelSelector, "label-selector", o.LabelSelector, ""+
+		"the default labels of cnr created by agent, this config must be consistent with the label-selector in katalyst-controller.")
 
 	fs.BoolVar(&o.MachineNetMultipleNS, "machine-net-multi-ns", o.MachineNetMultipleNS,
 		"if set as true, we should collect network interfaces from multiple ns")
@@ -75,6 +78,7 @@ func (o *BaseOptions) ApplyTo(c *global.BaseConfiguration) error {
 	c.Agents = o.Agents
 	c.NodeName = o.NodeName
 	c.NodeAddress = o.NodeAddress
+	c.LabelSelector = o.LabelSelector
 	c.LockFileName = o.LockFileName
 	c.LockWaitingEnabled = o.LockWaitingEnabled
 

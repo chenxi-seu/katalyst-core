@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,7 +61,8 @@ const (
 // cnrReporterImpl is to report cnr content to remote
 type cnrReporterImpl struct {
 	cnrName string
-
+	// labels contains the default config for CNR created by reporter
+	labels map[string]string
 	// latestUpdatedCNR is used as an in-memory cache for CNR;
 	// whenever CNR info is needed, get from this cache firstly
 	latestUpdatedCNR *nodev1alpha1.CustomNodeResource
@@ -82,11 +84,19 @@ func NewCNRReporter(genericClient *client.GenericClientSet, metaServer *metaserv
 	emitter metrics.MetricEmitter, conf *config.Configuration) (reporter.Reporter, error) {
 	c := &cnrReporterImpl{
 		cnrName:                conf.NodeName,
+		labels:                 make(map[string]string),
 		refreshLatestCNRPeriod: conf.RefreshLatestCNRPeriod,
 		notifiers:              make(map[string]metaservercnr.CNRNotifier),
 		emitter:                emitter,
 		client:                 genericClient.InternalClient,
 		updater:                control.NewCNRControlImpl(genericClient.InternalClient),
+	}
+	if conf.AgentConfiguration.LabelSelector != "" {
+		labels, err := getCNRDefaultLabels(conf.AgentConfiguration.LabelSelector)
+		if err != nil {
+			return nil, fmt.Errorf("parse lables from config failed: %v", err)
+		}
+		c.labels = labels
 	}
 	// register itself as a resource reporter in meta-server
 	metaServer.SetCNRFetcher(c)
@@ -337,7 +347,8 @@ func (c *cnrReporterImpl) resetCNRIfNeeded(err error) bool {
 func (c *cnrReporterImpl) defaultCNR() *nodev1alpha1.CustomNodeResource {
 	return &nodev1alpha1.CustomNodeResource{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: c.cnrName,
+			Name:   c.cnrName,
+			Labels: c.labels,
 		},
 	}
 }
@@ -457,6 +468,24 @@ func parseReportFieldToCNR(cnr *nodev1alpha1.CustomNodeResource, reportField v1a
 	}
 
 	return cnr, nil
+}
+
+// getCNRDefaultLabels get labels from agent configuration which is consistent with controller's label selector
+func getCNRDefaultLabels(labelSelector string) (map[string]string, error) {
+	var (
+		labels     = make(map[string]string)
+		labelPairs = strings.Split(labelSelector, ",")
+	)
+	for _, pair := range labelPairs {
+		keyValue := strings.Split(pair, "=")
+		if len(keyValue) == 2 {
+			labels[strings.TrimSpace(keyValue[0])] = strings.TrimSpace(keyValue[1])
+		} else {
+			return nil, fmt.Errorf("label selector config %s is invalid", labelSelector)
+		}
+	}
+
+	return labels, nil
 }
 
 // getCNRField only support to parse first-level fields in cnr now;

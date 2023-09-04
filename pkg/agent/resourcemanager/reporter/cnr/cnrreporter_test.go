@@ -256,6 +256,67 @@ func Test_parseReportFieldToCNR(t *testing.T) {
 	}
 }
 
+func Test_getCNRDefaultLabels(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		conf string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    map[string]string
+		wantErr bool
+	}{
+		{
+			name: "config's labelSelector with one label",
+			args: args{
+				conf: "node.katalyst.deploy=true",
+			},
+			want: map[string]string{
+				"node.katalyst.deploy": "true",
+			},
+		},
+		{
+			name:    "config's labelSelector with no label",
+			args:    args{conf: ""},
+			want:    map[string]string{},
+			wantErr: true,
+		},
+		{
+			name: "config's labelSelector with several labels",
+			args: args{
+				conf: "node.katalyst.deploy=true,node.katalyst.gray=false",
+			},
+			want: map[string]string{
+				"node.katalyst.deploy": "true",
+				"node.katalyst.gray":   "false",
+			},
+			wantErr: false,
+		},
+		{
+			name: "config's labelSelector with invalid labels",
+			args: args{
+				conf: "node.katalyst.deploy:true",
+			},
+			want:    map[string]string{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getCNRDefaultLabels(tt.args.conf)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getCNRDefaultLabels() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !apiequality.Semantic.DeepEqual(got, tt.want) {
+				t.Errorf("getCNRDefaultLabels() \ngot = %#v, \nwant %#v", got, tt.want)
+			}
+		})
+	}
+}
+
 func Test_initializeCNRFields(t *testing.T) {
 	t.Parallel()
 
